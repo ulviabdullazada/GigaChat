@@ -11,10 +11,11 @@ namespace GigaChat.Controllers
     public class HomeController : Controller
     {
         [Authorize]
-        public IActionResult Index()
+        [Route("/Index/Home/{room=global}")]
+        public IActionResult Index(string room)
         {
             if (!Authorize()) return RedirectToAction(nameof(Register));
-            var a = User;
+            ViewBag.Room = room;
             return View();
         }
         public IActionResult Register()
@@ -22,10 +23,10 @@ namespace GigaChat.Controllers
             return View();
         }
         [HttpPost]
-        public async Task<IActionResult> Register(string name, string img)
+        public async Task<IActionResult> Register(string name, string img, string returnUrl)
         {
             if (Helper.Users.Any(x => x.Name == name))
-                return NotFound();
+                return RedirectToAction(nameof(Room));
             var newUser = new Models.User
             {
                 Name = name,
@@ -35,7 +36,11 @@ namespace GigaChat.Controllers
             await AddClaims(newUser.Id.ToString(), newUser.Name, newUser.Image);
             HttpContext.Session.SetString("user", newUser.Id.ToString());
             Helper.Users.Add(newUser);
-            return RedirectToAction(nameof(Index));
+            if (returnUrl != null)
+            {
+                return LocalRedirect(returnUrl);
+            }
+            return RedirectToAction(nameof(Room));
         }
         [Authorize]
         public IActionResult Room()

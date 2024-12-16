@@ -6,11 +6,13 @@
     </div>
     <div class="col-md-9">
         <div class="d-flex flex-column justify-content-between">
-            <div style="height: 85vh;">
+            <div style="height: 85vh;overflow-y:auto; overflow-x:hidden;">
+                <ul class="message-area">
+                </ul>
             </div>
             <div class="d-flex justify-content-between">
                 <input type="text" class="form-control" id="message" placeholder="Enter message" name="message">
-                <button class="btn btn-success">Send</button>
+                <button class="btn btn-success send-btn">Send</button>
             </div>
         </div>
     </div>
@@ -18,6 +20,7 @@
 @section scripts{
     <script src="~/js/signalr.min.js"></script>
     <script>
+        
         const connection = new signalR.HubConnectionBuilder()
             .withUrl("/chat")
             .configureLogging(signalR.LogLevel.Information)
@@ -25,6 +28,7 @@
         async function start() {
             try {
                 await connection.start();
+                await connection.invoke("JoinRoom", room);
                 console.log("SignalR Connected.");
             } catch (err) {
                 console.log(err);
@@ -35,12 +39,52 @@
             await start();
         });
         start();
+        $("#message").on('keypress',function(e) {
+            if(e.which == 13) {
+               connection.invoke("SendMessage",$(this).val());
+               $(this).val('');
+            }
+        });
+        $('.send-btn').click(function(){
+            connection.invoke("SendMessage",$(this).prev().val());
+            $(this).prev().val('');
+        })
+        connection.on("RecieveMessage",function(data){
+            if(data.user.name == localStorage.getItem("user")){
+                $('.message-area').append(
+                    `<li class="row justify-content-between">
+                            <div class="col-md-11 text-end">
+                                <p class="p-0">${data.sendDate} - ${data.user.name}</p>
+                                <p class="p-0">${data.content}</p>
+                            </div>
+                            <div class="col-md-1">
+                                <img class="rounded-circle w-100" src="${data.user.image}">
+                            </div>
+                        </li>`
+                )
+            }
+            else{
+                $('.message-area').append(
+                    `<li class="row justify-content-between">
+                            <div class="col-md-1">
+                                <img class="rounded-circle w-100" src="${data.user.image}">
+                            </div>
+                            <div class="col-md-11 text-start">
+                                <p class="p-0">${data.sendDate} - ${data.user.name}</p>
+                                <p class="p-0">${data.content}</p>
+                            </div>
+                        </li>`
+                )
+            }
+        })
 
         connection.on("newUser",function(data){
             $('.list-group').html(
-                data.map(x=> `<li class="list-group-item bg-success text-white"><img src="${x.image}" width="60px">${x.name}</li>`)
+                data.map(x=> `<li class="list-group-item ${x.name == localStorage.getItem("user") ? "bg-success" : ""} text-white"><img src="${x.image}" width="60px">${x.name}</li>`)
             )
-            console.log(data);
         })
+        let room = '@ViewBag.Room';
+
+       
     </script>
 }

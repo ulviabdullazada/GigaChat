@@ -13,7 +13,12 @@ namespace GigaChat
             builder.Services.AddControllersWithViews();
             builder.Services.AddSignalR();
             builder.Services.AddSession();
-            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme);
+            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+            .AddCookie(x=>
+            {
+                x.AccessDeniedPath = "/Register/Home";
+                x.LoginPath = "/Register/Home";
+            });
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -33,10 +38,19 @@ namespace GigaChat
 
             app.UseAuthentication();
             app.UseAuthorization();
-
+            app.MapControllerRoute(
+                name:"room",
+                pattern: "room/{room}",
+                defaults: new
+                {
+                    Action = "Index",
+                    Controller = "Home",
+                    room = ""
+                }
+            );
             app.MapControllerRoute(
                 name: "default",
-                pattern: "{action=Index}/{controller=Home}/{room?}");
+                pattern: "{action=Register}/{controller=Home}/{room?}");
 
             app.Run();
         }
